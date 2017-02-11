@@ -3,7 +3,6 @@ const fs = require('fs')
 const request = require('request')
 const cheerio = require('cheerio')
 const app = express()
-const NightMare = require('nightmare')
 const router = express.Router()
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -11,12 +10,6 @@ const cors = require('cors')
 const jsdom = require('jsdom')
 const xmovies = require('./controllers/xmovies8')
 const hfl4u = require('./controllers/hindifilmlinks')
-const nightmare = NightMare({
-  show: false,
-  waitTimeout: 50000 // in ms  
-})
-xmovies.init(nightmare)
-hfl4u.init(nightmare)
 
 
 app.use(cors())
