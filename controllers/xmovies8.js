@@ -15,6 +15,8 @@ module.exports = {
     async.waterfall([
       // Step 1- Initiate Nightmare Instance Visit Page & Store Cookies in Cookie JAR!
       (callback) => {
+        var xvfb = new Xvfb()
+        xvfb.startSync()
         var nightmare = NightMare({
           show: false, waitTimeout: 30000, gotoTimeout: 10000 // in ms
         })
@@ -33,14 +35,14 @@ module.exports = {
             $('.thumb.cluetip', '.item_movie').each(function (index, element) {
               mymoviemodel.push('http:' + $(this).attr('rel'))
             })
-            callback(null, mymoviemodel, nightmare)
+            callback(null, mymoviemodel, nightmare, xvfb)
           })
           .catch(function (error) {
-            callback(true, error, nightmare)
+            callback(true, error, nightmare, xvfb)
           })
 
       },
-      (moviemodel, nightmare, callback) => {
+      (moviemodel, nightmare, xvfb, callback) => {
         myNightMare = nightmare
         moviedetails = []
         async.eachSeries(moviemodel, (link, cb) => {
@@ -56,8 +58,9 @@ module.exports = {
               metadata.title = $('.title').text()
               metadata.overview = $('.desc').text()
               metadata.playurl = 'http:' + $('.watch-now.btn.full.btn-gray').attr('href')
-              // metadata.image = 'https://s-media-cache-ak0.pinimg.com/originals/69/d6/70/69d67084313d99996ea59204' +
-              //     '09012a08.jpg'
+              // metadata.image =
+              // 'https://s-media-cache-ak0.pinimg.com/originals/69/d6/70/69d67084313d99996ea5
+              // 9 204' +     '09012a08.jpg'
               moviedetails.push(metadata)
               cb()
 
@@ -68,34 +71,43 @@ module.exports = {
               // })
             })
             .catch((error) => {
-              cb()//If it fails we just ignore and move on withy next one
+              cb() //If it fails we just ignore and move on withy next one
             })
         }, (err) => {
-          callback(err, moviedetails, myNightMare)
+          callback(err, moviedetails, myNightMare, xvfb)
         })
 
       }
-    ], (error, data, nightmare) => {
+    ], (error, data, nightmare, xvfb) => {
       if (error) {
         log.error(error, new Date().toJSON())
-        nightmare.end()        
+        nightmare.end()
+        xvfb.stopSync()
         return res.sendStatus(400)
       }
       nightmare.end()
+      xvfb.stopSync()
       res.json(data)
-      
+
     })
   },
   playMovie: (req, res) => {
     // Lets Try to Find a Playable link
     url = req.query.url //Test url
+    var xvfb = new Xvfb()
+    xvfb.startSync()
+    var nightmare = NightMare({
+      show: false, waitTimeout: 30000, gotoTimeout: 10000 // in ms
+    })
     nightmare
       .goto(url)
       .wait('#movie-player')
       .evaluate(() => {
         return document.body.innerHTML
       })
+      .end()
       .then((body) => {
+        xvfb.stopSync()
         $ = cheerio.load(body)
         if ($('#frame-player').length > 0) {
           //OpenLoad has loaded as source
@@ -151,6 +163,8 @@ module.exports = {
       })
       .catch((err) => {
         log.info(err, new Date().toJSON())
+        nightmare.end()
+        xvfb.stopSync()
         res.sendStatus(400)
       })
   }
